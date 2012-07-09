@@ -7,7 +7,7 @@ from utils import *
 print "finished imports"
 base_pair_ordering = "acgt"
 
-    
+
 def matches_accession_number(line):
     """Return an re.match object for the accession number pattern """
     return re.search(r'^AC\s+([A-Z0-9]+)', line)
@@ -45,7 +45,7 @@ def parse_lines_for_matrices(lines):
         matrix = matrix_from_lines(count_chunk[1:])
         matrices[accession_name] = matrix
     return matrices
-    
+
 def pssm_from_matrix(matrix,background_probs = (0.25,)*4):
     """Accept count matrix (as nested list) and return pssm (as nested list)"""
     def convert_column(col):
@@ -54,7 +54,7 @@ def pssm_from_matrix(matrix,background_probs = (0.25,)*4):
 
 def score(pssm,word):
     return sum([col[base_pair_ordering.index(base)] for col, base in zip(pssm,word)])
-    
+
 def partial_thresholds(pssm,theta):
     """Returns a list of partial thresholds to be interpreted as
     follows: After having read position i, you must have scored at
@@ -62,7 +62,7 @@ def partial_thresholds(pssm,theta):
     positive"""
     rev_maxes = map(max,pssm[::-1])
     rev_thetas = reduce(lambda ths,x: ths + [ths[-1] - x],rev_maxes,[theta])
-    return rev_thetas[::-1][1:]    
+    return rev_thetas[::-1][1:]
 
 test_pssm = [[1,3],[3,2]]
 
@@ -97,7 +97,7 @@ def algorithm1(esa, pssm, theta):
             d = d + 1
             score = score + M(d,suffixes[i][d])
             C[d] = score
-        if(d == m - 1 and score >= theta): 
+        if(d == m - 1 and score >= theta):
             matches.append((suf[i],score))
             while(i < n):
                 i += 1
@@ -109,7 +109,7 @@ def algorithm1(esa, pssm, theta):
             i = skipchain(lcp,skp,n,i,d)
         depth = lcp[i]
     return matches
-    
+
 def skipchain(lcp,skp,n,i,d):
     j = i + 1
     if i < n:
@@ -181,7 +181,7 @@ def parse_urs(filename):
                 print "anomaly on line: ",i
     urs[next_name] = current
     return urs
-            
+
 def search_urs_for_pssms(urs,tfs,alpha,n=None):
     """Return a nested dictionary containing, for every / the first n
     ur and every tf, a list of locations and scores at which each tf
@@ -208,23 +208,23 @@ def random_word(n):
 def test_lcps(n):
     for i in range(n):
         a = random_word(random.randrange(1000))
-    	b = random_word(random.randrange(1000))
-    	if lcp_functional(a,b) == lcp(a,b):
-    		print True
-    	else:
-    		print False, a, b
+        b = random_word(random.randrange(1000))
+        if lcp_functional(a,b) == lcp(a,b):
+            print True
+        else:
+            print False, a, b
 
 if __name__ == '__name__':
     gene_file = sys.argv[1] if len(sys.argv) > 1 else "upstream.fa"
-    
+
     with open("matrix.dat") as f:
         lines = f.readlines()
-        
+
         matrices = parse_lines_for_matrices(lines)
         pssms = {}
         for acc_name in matrices.keys():
             pssms[acc_name] = pssm_from_matrix(matrices[acc_name])
-            
+
             print "making transfac table"
             tt = matrix_parser.TransfacTable("matrix.dat")
             bustos_terms = [line.strip() for line in open("bustos_terms.txt").readlines()]
@@ -245,4 +245,3 @@ if __name__ == '__name__':
                 with open(pickle_file,'w') as f:
                     pickle.dump(results,f)
                     print "done"
-
