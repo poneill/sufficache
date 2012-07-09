@@ -1,4 +1,5 @@
 """Various utility functions for sufficache project"""
+import itertools
 
 def normalize(xs):
     return map(lambda(x): x/float(sum(xs)),xs)
