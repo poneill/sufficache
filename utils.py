@@ -52,3 +52,16 @@ def pairs(xs):
     return zip([None] + xs, xs + [None])[1:-1]
 
 
+def separate(pred, lst):
+    """separates lst into a list of elements satisfying pred and a list of 
+    elements not satisfying it.
+    """
+    sheep = []
+    goats = []
+    for elem in lst:
+        if pred(elem):
+            sheep.append(elem)
+        else:
+            goats.append(elem)
+    return (sheep, goats)
+
