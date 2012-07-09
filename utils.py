@@ -1,5 +1,7 @@
 """Various utility functions for sufficache project"""
-import itertools
+import itertools,math
+
+BASE_PAIR_ORDERING = "acgt"
 
 def normalize(xs):
     return map(lambda(x): x/float(sum(xs)),xs)
@@ -65,3 +67,5 @@ def separate(pred, lst):
             goats.append(elem)
     return (sheep, goats)
 
+def transpose(xxs):
+    return zip(*xxs)
