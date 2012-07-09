@@ -3,6 +3,6 @@
   Sufficache is a python module for fast Extended Suffix Array search
 for transcription factor binding sites.  It is primarily an
 implementation of an algorithm described in Beckstette, M. et
-al. (2006). "Fast index based algorithms and software for matching
-position specific scoring matrices". BMC Bioinformatics
+al. (2006). "/Fast index based algorithms and software for matching
+position specific scoring matrices/". BMC Bioinformatics
 7: 389. DOI:10.1186/1471-2105-7-389. PMC 1635428. PMID 16930469.
