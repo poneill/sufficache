@@ -2,54 +2,10 @@
 print "starting"
 import os,sys, re, math, random, itertools, time, pickle
 import matrix_parser
+from utils import *
 print "finished imports"
 base_pair_ordering = "acgt"
 
-def lexicographic_cmp(xs,ys):
-    if not xs or not ys:
-        return cmp(ys,xs)
-    elif xs[0] != ys[0]:
-        return cmp(xs,ys)
-    else:
-        return lexicographic_cmp(xs[1:],ys[1:])
-
-def lexicographic_cmp2(xs,ys):
-    i = 0
-    for i, (x,y) in enumerate(itertools.izip(xs,ys)):
-        if x != y:
-            return cmp(xs[i:],ys[i:])
-    return cmp(ys[i:],xs[i:])
-
-def suffixes_of(word):
-    suffixes = sorted([word[i:] for i in range(len(word))],
-                      cmp=lexicographic_cmp2)
-    return [suf + "$" for suf in (suffixes + [''])]
-
-def pprint(x):
-    for row in x:
-        print row
-        
-def nmers(n):
-    if n == 1:
-        return ["A","C","G","T"]
-    else:
-        return sum([map(lambda(b):b+c,nmers(n-1)) for c in base_pair_ordering],[])
-    
-def safe_log2(x):
-    """Implements log2, but defines log2(0) = 0"""
-    return math.log(x,2) if x > 0 else 0
-
-def complement(base):
-    return {"A":"T","T":"A","G":"C","C":"G"}[base]
-    
-def wc(word):
-    return map(complement, word[::-1])
-
-def split_on(xs, pred):
-    """Split xs into a list of lists each beginning with the next x
-    satisfying pred, except possibly the first"""
-    indices = [i for (i,v) in enumerate(xs) if pred(v)]
-    return [xs[i:j] for (i,j) in zip([0]+indices,indices+[len(xs)]) if i != j]
     
 def matches_accession_number(line):
     """Return an re.match object for the accession number pattern """
@@ -89,9 +45,6 @@ def parse_lines_for_matrices(lines):
         matrices[accession_name] = matrix
     return matrices
     
-def normalize(xs):
-    return map(lambda(x): x/float(sum(xs)),xs)
-
 def pssm_from_matrix(matrix,background_probs = (0.25,)*4):
     """Accept count matrix (as nested list) and return pssm (as nested list)"""
     def convert_column(col):
@@ -100,16 +53,7 @@ def pssm_from_matrix(matrix,background_probs = (0.25,)*4):
 
 def score(pssm,word):
     return sum([col[base_pair_ordering.index(base)] for col, base in zip(pssm,word)])
-
-def tail(xs):
-    if xs:
-        return xs[1:]
-    else:
-        return []
     
-def partial_sums(xs,acc = 0):
-    return [sum(xs[:i+1]) for i in range(len(xs))]
-
 def partial_thresholds(pssm,theta):
     """Returns a list of partial thresholds to be interpreted as
     follows: After having read position i, you must have scored at
@@ -119,16 +63,18 @@ def partial_thresholds(pssm,theta):
     rev_thetas = reduce(lambda ths,x: ths + [ths[-1] - x],rev_maxes,[theta])
     return rev_thetas[::-1][1:]
     
-def pairs(xs):
-    return zip([None] + xs, xs + [None])[1:-1]
-
 def lcp_functional(x,y):
+    """Return the length of the longest common prefix of x and y.
+    Because Python does not implement TCO, this will occasionally blow
+    the stack (!) and therefore is deprecated.  It is only included as
+    a reference implementation; use lcp instead."""
     if not x or not y or x[0] != y[0]:
         return 0
     else:
         return 1 + lcp(x[1:],y[1:])
 
 def lcp(x,y):
+    """Return the length of the longest common prefix of x and y"""
     i = 0
     length = min(len(x),len(y))
     for i, (x,y) in enumerate(zip(x,y)):
@@ -292,7 +238,7 @@ def test_lcps(n):
     for i in range(n):
         a = random_word(random.randrange(1000))
     	b = random_word(random.randrange(1000))
-    	if lcp2(a,b) == lcp(a,b):
+    	if lcp_functional(a,b) == lcp(a,b):
     		print True
     	else:
     		print False, a, b
