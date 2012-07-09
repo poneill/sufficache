@@ -16,15 +16,15 @@ def matches_column(line):
 ([.0-9]+)\s+ #Gs
 ([.0-9]+)    #Ts
 """
-    return re.search(regexp,line,re.VERBOSE)
+    return re.search(regexp, line, re.VERBOSE)
 
 class TransfacTable(object):
     """Represents matrix.dat"""
-    def __init__(self,filename):
+    def __init__(self, filename):
         """Accept a filename (matrix.dat) and return a
         dictionary representation thereof"""
         lines = open(filename).readlines()
-        accession_chunks = split_on(lines,matches_accession_number)[1:]
+        accession_chunks = split_on(lines, matches_accession_number)[1:]
         self.entries = map(self.parse_accession_chunk, accession_chunks)
 
     def parse_accession_chunk(self, chunk):
