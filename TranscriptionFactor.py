@@ -34,16 +34,6 @@ class TranscriptionFactor(object):
                      'P0'] #signals beginning of PSWM
         return not any(line.startswith(tlid) for tlid in bad_tlids)
 
-    def matches_text(self,text):
-        """Search object attributes for text"""
-        def contains_text(attr):
-            if type(attr) is list:
-                return any(text.upper() in line.upper() for line in attr)
-            else:
-                return text.upper() in attr.upper()
-        attrs = [attr for attr in dir(self) if attr[0] in string.uppercase]
-        return any(contains_text(getattr(self,attr)) for attr in attrs)
-
     def matrix_from_lines(self,lines):
         """Convert raw column lines into matrix.  Assumes all lines are
         column lines"""
