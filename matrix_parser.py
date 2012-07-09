@@ -1,5 +1,6 @@
-import re, string, math
-import TranscriptionFactor
+import re, string
+from TranscriptionFactor import TranscriptionFactor
+from utils import split_on
 
 def matches_accession_number(line):
     """Return an re.match object for the accession number pattern """
