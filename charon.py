@@ -9,7 +9,6 @@ while(True):
     pickles = [f for f in files if f.endswith("pickle")]
     if pickles:
         archive_name = "archive%s.tar" % i
-        tar_command = "tar -czf %s %s" % (achive_name, " ".join(pickles))
+        tar_command = "tar -czf %s %s" % (archive_name, " ".join(pickles))
         subprocess.call(shlex.split(tar_command))
-        scp_command = "scp "
         i += 1
