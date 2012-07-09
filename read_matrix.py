@@ -110,15 +110,6 @@ def algorithm1(esa, pssm, theta):
         depth = lcp[i]
     return matches
 
-def skipchain(lcp, skp, n, i, d):
-    j = i + 1
-    if i < n:
-        while((j <= n) and (lcp[j] > d)):
-            j = skp[j]
-    else:
-        j = n
-    return j
-
 def list_all_scores(pssm):
     if not pssm:
         return [0]
