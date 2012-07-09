@@ -5,7 +5,6 @@ import matrix_parser, ESA
 from utils import *
 
 print "finished imports"
-BASE_PAIR_ORDERING = "acgt"
 
 
 def matches_accession_number(line):
@@ -129,7 +128,6 @@ def list_all_scores(pssm):
 def sample_scores(pssm, n):
     return [sum(random.choice(w) for w in pssm) for i in range(n)]
 
-cutoffs = {}
 def return_cutoff(pssm, alpha, n):
     """Return an estimated cutoff value theta such that
     P(score(w, pssm) > theta) < alpha"""
