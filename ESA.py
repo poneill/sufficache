@@ -13,6 +13,9 @@ def lcp_functional(x, y):
 
 def lcp(x, y):
     """Return the length of the longest common prefix of x and y"""
+    #Because Python does not implement TCO, a functional
+    #implementation will occasionally blow the stack (!).  That's why
+    #this looks so ridiculous
     i = 0
     length = min(len(x), len(y))
     for i, (x, y) in enumerate(zip(x, y)):
