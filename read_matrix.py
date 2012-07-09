@@ -66,8 +66,6 @@ def partial_thresholds(pssm, theta):
     rev_thetas = reduce(lambda ths, x: ths + [ths[-1] - x], rev_maxes, [theta])
     return rev_thetas[::-1][1:]
 
-test_pssm = [[1, 3], [3, 2]]
-
 def algorithm1(esa, pssm, theta):
     """Implements algorithm 1 from Beckstette et al."""
     matches = []
@@ -122,23 +120,6 @@ def skipchain(lcp, skp, n, i, d):
         j = n
     return j
 
-def skipchain_old(lcp, skp, n, i, d):
-    print "calling skipchain with n = {0}, i  = {1}, d = {2}".format(n, i, d)
-    if i < n:
-        j = i + 1
-        while((j <= n) and (lcp[j] > d)):
-            j = skp[j] + 1
-    else:
-        j = n
-    return j
-
-def naive_match(esa, pssm, theta):
-    word = esa.word
-    window = len(pssm)
-    scores = [score(pssm, word[i:i+window]) for i in range(len(word))]
-    matches = [(i, s) for (i, s) in enumerate(scores) if s >= theta]
-    return matches
-
 def list_all_scores(pssm):
     if not pssm:
         return [0]
@@ -158,11 +139,6 @@ def return_cutoff(pssm, alpha, n):
         samples = sorted(sample_scores(pssm, n), reverse=True)
         cutoffs[(str(pssm), alpha, n)] = samples[int(alpha*n)]
         return cutoffs[(str(pssm), alpha, n)]
-
-def return_max(pssm, n):
-    "Return sample max"
-    samples = sorted(sample_scores(pssm, n), reverse=True)
-    return samples[0]
 
 def parse_urs(filename):
     "Parse filename (e.g. upstream5000.fa), return a list of upstream regions"
@@ -205,18 +181,6 @@ def search_urs_for_pssms(urs, tfs, alpha, n=None):
             sites[ur][tf.ID] = algorithm1(esa, tf.pssm, cutoff)
     print "finishing at " + time.asctime()
     return sites
-
-def random_word(n):
-    return "".join([random.choice("ATGC") for i in range(n)])
-
-def test_lcps(n):
-    for i in range(n):
-        a = random_word(random.randrange(1000))
-        b = random_word(random.randrange(1000))
-        if lcp_functional(a, b) == lcp(a, b):
-            print True
-        else:
-            print False, a, b
 
 if __name__ == '__name__':
     gene_file = sys.argv[1] if len(sys.argv) > 1 else "upstream.fa"
