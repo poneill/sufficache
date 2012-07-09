@@ -23,13 +23,13 @@ class PSSM(list):
         def convert_column(col):
             return [safe_log2(c/p)
                     for (c, p) in zip(normalize(col), background_probs)]
-        def counts(column):
+        def count(column):
             return [column.count(c) for c in BASE_PAIR_ORDERING]
         print data
         if not type(data[0][0]) is str:
             self.columns = [convert_column(col) for col in data]
         else:
-            counts = [counts(col) for col in transpose(data)]
+            counts = [count(col) for col in transpose(data)]
             self.columns = [convert_column(col) for col in counts]
             self.motif = data
             
@@ -85,7 +85,7 @@ class PSSM(list):
         #As for style: sorry mom, sorry dad, sorry Cormen.
         matches = []
         C = {}
-        thetas = partial_thresholds(pssm, theta)
+        thetas = self.partial_thresholds(theta)
         suf, lcp, skp, suffixes = esa.suf, esa.lcp, esa.skp, esa.suffixes
         depth = 0
         i = 0
@@ -93,8 +93,17 @@ class PSSM(list):
         if 'n' in esa.word:
             return [(-1, -1)] #if there exist ns in the string, deal with
                              #it later
-        m = len(pssm)
-        M = lambda d, char: pssm[d][BASE_PAIR_ORDERING.index(char)]
+        m = len(self)
+        M = lambda d, char: self[d][BASE_PAIR_ORDERING.index(char)]
+        def skipchain(lcp, skp, n, i, d):
+            j = i + 1
+            if i < n:
+                while((j <= n) and (lcp[j] > d)):
+                    j = skp[j]
+                else:
+                    j = n
+            return j
+
         while (i < n):
             if n - m < suf[i]: #if too far in to match
                 while(n - m < suf[i] and (i < n)):
