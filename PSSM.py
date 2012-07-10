@@ -1,6 +1,9 @@
 import random
 from utils import *
 
+def contains_binding_sites(data):
+    return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
+
 class PSSM(list):
     """Implements a position-specific scoring matrix.  The primary
     data representation is a list of lists of log-likelihoods for each
@@ -29,6 +32,7 @@ class PSSM(list):
         if not type(data[0][0]) is str:
             self.columns = [convert_column(col) for col in data]
         else:
+            assert(contains_binding_sites(data))
             counts = [count(col) for col in transpose(data)]
             self.columns = [convert_column(col) for col in counts]
             self.motif = data
