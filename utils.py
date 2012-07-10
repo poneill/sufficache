@@ -24,28 +24,15 @@ def enum_suffixes_of(word,n=None):
     sufs = [(enum,suf + "$") for (enum,suf) in (suffixes + [(len(word),'')])]
     return sufs
 
-def lexico(i,j,word):
-    """Given indices i and j in word, determine whether the ith or jth
-    suffix is lexically prior"""
-    n = len(word)
-    if not (i < n and j < n):
-        return cmp(i,j)
-    wi = word[i]
-    wj = word[j]
-    if not wi == wj:
-        return cmp(wi, wj)
-    else:
-        return lexico(i + 1,j+1,word)
-
 def lexico2(i,j,word):
     """Given indices i and j in word, determine whether the ith or jth
     suffix is lexically prior"""
     n = len(word)
     while (i < n and j < n):
-        wi = word[i]
-        wj = word[j]
-        if not wi == wj:
-            return cmp(wi, wj)
+        # wi = word[i]
+        # wj = word[j]
+        if not word[i] == word[j]:
+            return cmp(word[i], word[j])
         else:
             i += 1
             j += 1
@@ -61,12 +48,15 @@ def test_lexico(n):
         print xs[i:],xs[j:],i,j,"\t",lexico(i,j,xs)==lexico2(i,j,xs)
     
 def fast_sufs(word,n=None):
+    def inline(i,j):
+        return lexico(i,j,word)
     sufs = sorted(range(len(word)),
-                  cmp=lambda i,j:lexico2(i,j,word)) + [len(word)]
+                  cmp=inline) + [len(word)]
     return sufs
 
 def faster_sufs(word):
-    
+    pass
+
 def pprint(x):
     for row in x:
         print row
@@ -131,3 +121,5 @@ def separate(pred, lst):
 
 def transpose(xxs):
     return zip(*xxs)
+
+print "loaded utils"
