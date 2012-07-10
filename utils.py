@@ -122,4 +122,16 @@ def separate(pred, lst):
 def transpose(xxs):
     return zip(*xxs)
 
+def gen_head(xs):
+    """Return first element of xs if such an element, otherwise return
+    empty list"""
+    #We do this in order to avoid computing the entire list
+    #comprehension in the assignment of ESA.skp.  This leads to a 3x
+    #speedup at the expense of slightly uglier code.
+    try:
+        return xs.next()
+    except StopIteration:
+        return []
+        
+
 print "loaded utils"
