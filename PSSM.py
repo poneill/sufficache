@@ -28,13 +28,10 @@ class PSSM(list):
                     for (c, p) in zip(normalize(col), background_probs)]
         def count(column):
             return [column.count(c) for c in BASE_PAIR_ORDERING]
-        print data
         if not type(data[0][0]) is str:
             self.columns = [convert_column(col) for col in data]
         else:
-            print "asserting"
             assert(contains_binding_sites(data))
-            print "asserted"
             counts = [count(col) for col in transpose(data)]
             self.columns = [convert_column(col) for col in counts]
             self.motif = data
@@ -118,7 +115,6 @@ class PSSM(list):
         
 
         while (i < n):
-            print i
             if n - m < suf[i]: #if too far in to match
                 while(n - m < suf[i] and (i < n)):
                     i += 1

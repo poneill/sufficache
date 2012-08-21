@@ -44,7 +44,6 @@ class ESA_deprecated(object):
         self.suf = [len(word) - len(self._suffixes[i]) + 1
                     for i in range(len(word)+1)]
         self.lcp = [0] + [lcp(x, y) for (x, y) in pairs(self._suffixes)]
-        print len(self.lcp)
         self.skp = [min(gen_head((j for j in range(i+1, len(word) + 1)
                          if self.lcp[j] < self.lcp[i])),len(word) + 1)
                          for i in range(len(word) + 1)]
@@ -54,11 +53,9 @@ class ESA_deprecated(object):
     
     def skipchain(self, i, d):
         n = len(self.word)
-        print "skipchain"
         j = i + 1
         if i < n:
             while((j <= n) and (self.lcp[j] > d)):
-                print "+1"
                 j = self.skp[j]#should be +1? Tue Aug 21 13:27:34 EDT 2012
         else:
             j = n
@@ -87,7 +84,6 @@ class ESA(object):
 
     def skipchain(self, i, d):
         n = len(self.word)
-        print "skipchain"
         j = i + 1
         if i < n:
             while((j <= n) and (self.lcp[j] > d)):
@@ -117,22 +113,16 @@ def suffix_array(word,sigma = None):
     i = 0
     j = 0
     while i < N - 1:
-        print "i:",i
         buckets[T[i]].append(i)
         if not T[i] == T[i + 1]:
-            print "iffing"
             SL_array[i] = S if T[i] < T[i + 1] else L
             # print "before:",dist, S_yet
             # print "after:",dist, S_yet
         else:
-            print "elsing"
             j = i + 1
             while T[j] == T[j + 1]:
                 j += 1
-                print "j:",j
             val = S if T[j] > T[i] else L
-            print i,j
-#            for k in range(i,j):
             while i < j:
                 SL_array[i] = val
                 i += 1
