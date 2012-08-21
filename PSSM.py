@@ -32,7 +32,9 @@ class PSSM(list):
         if not type(data[0][0]) is str:
             self.columns = [convert_column(col) for col in data]
         else:
+            print "asserting"
             assert(contains_binding_sites(data))
+            print "asserted"
             counts = [count(col) for col in transpose(data)]
             self.columns = [convert_column(col) for col in counts]
             self.motif = data
@@ -76,12 +78,26 @@ class PSSM(list):
     def sample_scores(self, n):
         return [sum(random.choice(w) for w in self.columns) for i in range(n)]
 
+    def cutoff_bootstrap_ci(self,alpha,n):
+        """Compute a bootstrap confidence interval for the cutoff
+        values theta such that P(pssm.score(w) > theta) < alpha.  That
+        is, find interval (a,b) such that P(theta in (a,b)) = .95"""
+        cutoffs = sorted([self.cutoff(alpha,n) for i in range(200)])
+        a = cutoffs[5] # 2.5%
+        b = cutoffs[195] # 2.5%
+        return (a,b)
+        
     def cutoff(self, alpha, n):
         """Return a Monte Carlo estimate (over n trials) for the cutoff
         value theta such that P(pssm.score(w) > theta) < alpha"""
         samples = sorted(self.sample_scores(n), reverse=True)
         return samples[int(alpha*n)]
 
+    def search_esa_reference(self,esa,theta):
+        """Reference implementation of search esa"""
+        scores = [(i,self.score(esa.word[i:])) for i in range(len(esa.word))]
+        return filter(lambda (i,score): score > theta,scores)
+    
     def search_esa(self,esa,theta):
         """Implements algorithm 1 from Beckstette et al."""
         #The pseudo-code given in Beckstette is incorrect.  I have
@@ -99,16 +115,10 @@ class PSSM(list):
                              #it later
         m = len(self)
         M = lambda d, char: self[d][BASE_PAIR_ORDERING.index(char)]
-        def skipchain(lcp, skp, n, i, d):
-            j = i + 1
-            if i < n:
-                while((j <= n) and (lcp[j] > d)):
-                    j = skp[j]
-                else:
-                    j = n
-            return j
+        
 
         while (i < n):
+            print i
             if n - m < suf[i]: #if too far in to match
                 while(n - m < suf[i] and (i < n)):
                     i += 1
@@ -124,7 +134,7 @@ class PSSM(list):
             while(sentinel or (d < m -1 and score >= thetas[d])):
                 sentinel = False
                 d = d + 1
-                score = score + M(d, suffixes[i][d])
+                score = score + M(d, suffixes(i)[d])
                 C[d] = score
             if(d == m - 1 and score >= theta):
                 matches.append((suf[i], score))
@@ -135,7 +145,7 @@ class PSSM(list):
                     else:
                         break
             else:
-                i = skipchain(lcp, skp, n, i, d)
+                i = esa.skipchain(i, d)
             depth = lcp[i]
         return matches
 

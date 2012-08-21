@@ -37,20 +37,34 @@ def lcp2(x, y, word):
             break
     return i
 
-class ESA(object):
+class ESA_deprecated(object):
     def __init__(self, word):
         self.word = word
-        self.suffixes = suffixes_of(word)
-        self.suf = [len(word) - len(self.suffixes[i]) + 1
+        self._suffixes = suffixes_of(word)
+        self.suf = [len(word) - len(self._suffixes[i]) + 1
                     for i in range(len(word)+1)]
-        self.lcp = [0] + [lcp(x, y) for (x, y) in pairs(self.suffixes)]
+        self.lcp = [0] + [lcp(x, y) for (x, y) in pairs(self._suffixes)]
         print len(self.lcp)
         self.skp = [min(gen_head((j for j in range(i+1, len(word) + 1)
                          if self.lcp[j] < self.lcp[i])),len(word) + 1)
                          for i in range(len(word) + 1)]
-        
-        
-class ESA2(object):
+
+    def suffixes(self,i):
+        return self._suffixes[i]
+    
+    def skipchain(self, i, d):
+        n = len(self.word)
+        print "skipchain"
+        j = i + 1
+        if i < n:
+            while((j <= n) and (self.lcp[j] > d)):
+                print "+1"
+                j = self.skp[j]#should be +1? Tue Aug 21 13:27:34 EDT 2012
+        else:
+            j = n
+        return j
+    
+class ESA(object):
     def __init__(self, word):
         self.word = word
         # self.suffixes = suffixes_of(word)
@@ -67,8 +81,21 @@ class ESA2(object):
         self.skp = [min(gen_head((j for j in xrange(i+1, n + 1)
                          if self.lcp[j] < self.lcp[i])),n + 1)
                          for i in xrange(n + 1)]
-        
-        
+
+    def suffixes(self,i):
+        return self.word[self.suf[i]:]
+
+    def skipchain(self, i, d):
+        n = len(self.word)
+        print "skipchain"
+        j = i + 1
+        if i < n:
+            while((j <= n) and (self.lcp[j] > d)):
+                j = self.skp[j]#should be +1? Tue Aug 21 13:27:34 EDT 2012
+        else:
+            j = n
+        return j
+    
 def alphabet(word):
     return ['$'] + sorted(list(set(word)))
 

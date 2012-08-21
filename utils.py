@@ -1,5 +1,6 @@
 """Various utility functions for sufficache project"""
 import itertools,math
+import random
 
 BASE_PAIR_ORDERING = "acgt"
 
@@ -24,7 +25,7 @@ def enum_suffixes_of(word,n=None):
     sufs = [(enum,suf + "$") for (enum,suf) in (suffixes + [(len(word),'')])]
     return sufs
 
-def lexico2(i,j,word):
+def lexico(i,j,word):
     """Given indices i and j in word, determine whether the ith or jth
     suffix is lexically prior"""
     n = len(word)
@@ -133,5 +134,7 @@ def gen_head(xs):
     except StopIteration:
         return []
         
+def random_site(n):
+    return "".join([random.choice("acgt") for i in range(n)])
 
 print "loaded utils"
