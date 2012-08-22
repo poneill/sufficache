@@ -35,7 +35,8 @@ class PSSM(list):
             counts = [count(col) for col in transpose(data)]
             self.columns = [convert_column(col) for col in counts]
             self.motif = data
-            
+        self.length = len(self.columns)
+        
     def __len__(self):
         return len(self.columns)
 
@@ -48,7 +49,7 @@ class PSSM(list):
 
     def __getslice__(self,i,j):
         return self.columns[i:j]
-
+        
     def score(self,word):
         """Return log-odds score for word"""
         return sum([col[BASE_PAIR_ORDERING.index(base)]
@@ -92,7 +93,8 @@ class PSSM(list):
 
     def search_esa_reference(self,esa,theta):
         """Reference implementation of search esa"""
-        scores = [(i,self.score(esa.word[i:])) for i in range(len(esa.word))]
+        scores = [(i,self.score(esa.word[i:i+self.length]))
+                  for i in xrange(len(esa.word))]
         return filter(lambda (i,score): score > theta,scores)
     
     def search_esa(self,esa,theta):
