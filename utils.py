@@ -137,4 +137,34 @@ def gen_head(xs):
 def random_site(n):
     return "".join([random.choice("acgt") for i in range(n)])
 
+def choose2(xs,gen=False):
+    """return list of choose(xs, 2) pairs, retaining ordering on xs"""
+    if gen:
+        return ((x1, x2) for i, x1 in enumerate(xs) for x2 in xs[i+1:])
+    else:
+        return [(x1, x2) for i, x1 in enumerate(xs) for x2 in xs[i+1:]]
+
+def partition(pred, xs):
+    part = []
+    appended = False
+    for x in xs:
+        appended = False
+        for p in part:
+            if pred(x,p[0]):
+                p.append(x)
+                appended = True
+                break
+        if not appended:
+            part.append([x])
+    return part
+
+def foldl(f,z,xs):
+    if not xs:
+        return z
+    else: 
+        return foldl(f,f(z,xs[0]),xs[1:])
+
+def foldl1(f,xs):
+    return foldl(f,xs[0],xs[1:])
+
 print "loaded utils"
