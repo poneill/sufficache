@@ -1,6 +1,9 @@
 """Extended Suffix Array Class"""
 from utils import *
 import time
+import math
+from kark_sort import simple_kark_sort
+
 def lcp_functional(x, y):
     """Return the length of the longest common prefix of x and y.
     Because Python does not implement TCO, this will occasionally blow
@@ -60,6 +63,38 @@ class ESA_deprecated(object):
         else:
             j = n
         return j
+    
+class ESA_dev(object):
+    def __init__(self, word):
+        self.word = word
+        # self.suffixes = suffixes_of(word)
+        # self.suf = [len(word) - len(self.suffixes[i]) + 1
+        #             for i in range(len(word)+1)]
+        n = len(word)
+        print "sufs"
+        self.suf = simple_kark_sort(word)
+        print "lcp"
+        self.lcp = [0] + [lcp2(self.suf[i], self.suf[j], word)
+                          for (i, j) in gen_pairs_range(n + 1)]
+        print len(self.lcp)
+        print "skp"
+        self.skp = [min(gen_head((j for j in xrange(i+1, n + 1)
+                         if self.lcp[j] < self.lcp[i])),n + 1)
+                         for i in xrange(n + 1)]
+
+    def suffixes(self,i):
+        return self.word[self.suf[i]:]
+
+    def skipchain(self, i, d):
+        n = len(self.word)
+        j = i + 1
+        if i < n:
+            while((j <= n) and (self.lcp[j] > d)):
+                j = self.skp[j]#should be +1? Tue Aug 21 13:27:34 EDT 2012
+        else:
+            j = n
+        return j
+    
     
 class ESA(object):
     def __init__(self, word):
@@ -153,11 +188,66 @@ def suffix_array(word,sigma = None):
                     
     return SL_array,dists,s_distance_lists
 
+def radix_sort(triples,place):
+    alphabet = sorted(set([t for (i,triple) in triples
+                           for t in triple] + ["$"]))
+    buckets = {c:[] for c in alphabet}
+    for (i,triple) in triples:
+        c = triple[place]
+        buckets[c].append((i,triple))
+    return sum([buckets[c] for c in alphabet],[])
+
+def radix_passes(triples,place=2):
+    if place < 0:
+        return triples
+    else: return radix_passes(radix_sort(triples,place),place-1)
+
+def compute_taus(sorted_triples):
+    i_s,triples = zip(*sorted_triples)
+    n = len(triples)
+    taus = [None] * n
+    taus[0] = 0
+    for i in range(1,n):
+        if triples[i] == triples[i - 1]:
+            taus[i] = taus[i-1]
+        else:
+            taus[i] = taus[i-1] + 1
+    return dict(zip(i_s,taus))
+        
+def compute_triples(word):
+    n = len(word) - 3
+    triples = [(i,word[i:i+3]) for i in range(n) if i % 3 != 0]
+    if n % 3 == 1:
+        triples += [(n,word[n:n+3])]
+    return triples
+
+def taus_unique_amongst_triples(taus,triples):
+    ps = partition(lambda s,t: s[1] == t[1], triples)
+    tau_diversities = [len(set([taus[i] for (i,t) in p])) for p in ps]
+    return all([t_d == 1 for t_d in tau_diversities])
+    # return all((taus[i] == taus[j]
+    #         for ((i,trip_i),(j,trip_j)) in choose2(triples,gen=True)
+    #         if trip_i == trip_j))
+
 def skew(word):
     n = len(word)
-    word += "$" * ((3 - n) % 3)
+    word += "$$$"
+    #print word
+    triples = compute_triples(word)
+    sorted_triples = radix_passes(triples)
+    taus = compute_taus(sorted_triples)
+    n0 = int(math.ceil((n-0)/3.0))
+    n2 = int(math.ceil((n-2)/3.0))
+    #print "taus:",taus
+    t1 = [taus[1+3*i] for i in range(n0)]
+    t2 = [taus[2+3*i] for i in range(n2)]
+    t_prime = t1 + t2
+    #print "triples:",triples
+    #print "t_prime:",t_prime
+    print "unique:",taus_unique_amongst_triples(taus,triples)
     
-    print word
+
+    
 def s_dist(xs):
     s_yet = False
     s_dists = []
