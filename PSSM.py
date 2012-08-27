@@ -5,6 +5,7 @@ def contains_binding_sites(data):
     return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
 
 class PSSM(list):
+    bpo = {"a":0,"c":1,"g":2,"t":3}
     """Implements a position-specific scoring matrix.  The primary
     data representation is a list of lists of log-likelihoods for each
     character, for each column, of the pssm.  The characters are
@@ -49,10 +50,39 @@ class PSSM(list):
 
     def __getslice__(self,i,j):
         return self.columns[i:j]
+
+    def base_pair_ordering(self,base):
+        if base in "ac":
+            if base == 'a':
+                return 0
+            else:
+                return 1
+        else:
+            if base == 'g':
+                return 2
+            else:
+                return 3
+
+    def base_pair_ordering2(self,base):
+        if base == 'a':
+            return 0
+        elif base == 'c':
+            return 1
+        elif base == 'g':
+            return 2
+        else:
+            return 3
+
+    
+    def base_pair_ordering3(self,base):
+        return {"a":0,"c":1,"g":2,"t":3}
+
         
     def score(self,word):
         """Return log-odds score for word"""
-        return sum([col[BASE_PAIR_ORDERING.index(base)]
+        #return sum([col[BASE_PAIR_ORDERING.index(base)]
+        #            for col, base in zip(self.columns, word)])
+        return sum([col[PSSM.bpo[base]]
                     for col, base in zip(self.columns, word)])
 
     def partial_thresholds(self,theta):
