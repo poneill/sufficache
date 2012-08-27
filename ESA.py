@@ -64,7 +64,7 @@ class ESA_deprecated(object):
             j = n
         return j
     
-class ESA_dev(object):
+class ESA(object):
     def __init__(self, word):
         self.word = word
         # self.suffixes = suffixes_of(word)
@@ -96,7 +96,7 @@ class ESA_dev(object):
         return j
     
     
-class ESA(object):
+class ESA_deprecated2(object):
     def __init__(self, word):
         self.word = word
         # self.suffixes = suffixes_of(word)
