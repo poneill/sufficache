@@ -1,5 +1,6 @@
 import random
 from utils import *
+from math import log
 
 def contains_binding_sites(data):
     return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
@@ -11,6 +12,20 @@ class PSSM(list):
     character, for each column, of the pssm.  The characters are
     assumed to be ordered according to BASE_PAIR_ORDERING,
     i.e. alphabetically."""
+
+    bpo = {"a":0,"c":1,"g":2,"t":3} #base-pair ordering
+    
+    # def bpo(self,c):
+    #     if c in "ac":
+    #         if c == 'a':
+    #             return 0
+    #         else:
+    #             return 1
+    #     elif c == "g":
+    #         return 2
+    #     else:
+    #         return 3
+
     def __init__(self,data,background_probs = (0.25,)*4):
         """Given a representation of a binding motif and an optional
         tuple of background probabilities, initialize a PSSM object.
@@ -34,9 +49,11 @@ class PSSM(list):
         else:
             assert(contains_binding_sites(data))
             counts = [count(col) for col in transpose(data)]
+            self.counts = counts
             self.columns = [convert_column(col) for col in counts]
             self.motif = data
         self.length = len(self.columns)
+        self.consensus = self.get_consensus()
         
     def __len__(self):
         return len(self.columns)
@@ -177,4 +194,33 @@ class PSSM(list):
             depth = lcp[i]
         return matches
 
+    def get_consensus(self):
+        return "".join([max(col,key=lambda c:col.count(c))
+                        for col in transpose(self.motif)])
 
+    def het_index(self,seq):
+        n = len(self.motif)
+        return sum(log((self.counts[i][PSSM.bpo[self.consensus[i]]]+0.5)/
+                       (self.counts[i][PSSM.bpo[seq[i]]] + 0.5))
+                   for i in range(len(seq)))
+
+    def trap(self,seq,beta):
+        """Return the binding affinity as given by the TRAP model.
+        See Manke 2008, Roider 2007."""
+        n = len(self.motif)
+        w = len(self.motif[0])
+        lamb = 0.7
+        ln_R_0 = 0.585 * w - 5.66
+        E = sum(1/lamb * log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
+                             (self.counts[i][PSSM.bpo[seq[i]]] + 1))
+                for i in range(len(seq)))
+        #we define beta = -1/kBT whereas Manke defines b = 1/kBT,
+        #hence change of sign
+        return E + ln_R_0
+
+    def slide_score(self,genome):
+        w = len(self.motif[0])
+        return [self.score(genome[i:i+width])
+                           for in verbose_gen(range(len(genome) - w + 1),100000)]
+        
+print("loaded PSSM")
