@@ -221,6 +221,6 @@ class PSSM(list):
     def slide_score(self,genome):
         w = len(self.motif[0])
         return [self.score(genome[i:i+width])
-                           for in verbose_gen(range(len(genome) - w + 1),100000)]
+                           for i in verbose_gen(range(len(genome) - w + 1),100000)]
         
 print("loaded PSSM")
