@@ -2,9 +2,20 @@ import random
 from utils import *
 from math import log
 
+kB  = 0.0019872041 #kcal/mol (!)
+temp = 310.15 #37C
+beta = -1/(kB*temp)
+
 def contains_binding_sites(data):
     return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
 
+def verbose_gen(xs,n=1):
+    for i,x in enumerate(xs):
+        if i % n == 0:
+            print i
+        yield x
+
+        
 class PSSM(list):
     bpo = {"a":0,"c":1,"g":2,"t":3}
     """Implements a position-specific scoring matrix.  The primary
@@ -204,7 +215,7 @@ class PSSM(list):
                        (self.counts[i][PSSM.bpo[seq[i]]] + 0.5))
                    for i in range(len(seq)))
 
-    def trap(self,seq,beta):
+    def trap(self,seq,beta=beta):
         """Return the binding affinity as given by the TRAP model.
         See Manke 2008, Roider 2007."""
         n = len(self.motif)
@@ -221,6 +232,11 @@ class PSSM(list):
     def slide_score(self,genome):
         w = len(self.motif[0])
         return [self.score(genome[i:i+width])
+                           for i in verbose_gen(range(len(genome) - w + 1),100000)]
+
+    def slide_trap(self,genome):
+        w = len(self.motif[0])
+        return [self.trap(genome[i:i+w])
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
         
 print("loaded PSSM")
