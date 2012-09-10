@@ -6,6 +6,12 @@ kB  = 0.0019872041 #kcal/mol (!)
 temp = 310.15 #37C
 beta = -1/(kB*temp)
 
+def verbose_gen(xs,n=1):
+    for i,x in enumerate(xs):
+        if i % n == 0:
+            print i
+        yield x
+        
 def contains_binding_sites(data):
     return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
 
@@ -222,16 +228,20 @@ class PSSM(list):
         w = len(self.motif[0])
         lamb = 0.7
         ln_R_0 = 0.585 * w - 5.66
-        E = sum(1/lamb * log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
+        E = 1/lamb * sum(log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
                              (self.counts[i][PSSM.bpo[seq[i]]] + 1))
                 for i in range(len(seq)))
         #we define beta = -1/kBT whereas Manke defines b = 1/kBT,
         #hence change of sign
         return E + ln_R_0
 
+    def slide_trap(self,genome):
+        w = len(self.motif[0])
+        return [self.trap(genome[i:i+w])
+                           for i in verbose_gen(range(len(genome) - w + 1),100000)]
     def slide_score(self,genome):
         w = len(self.motif[0])
-        return [self.score(genome[i:i+width])
+        return [self.score(genome[i:i+w])
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
 
     def slide_trap(self,genome):
