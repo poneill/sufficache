@@ -73,7 +73,8 @@ def safe_log2(x):
     return math.log(x,2) if x > 0 else 0
 
 def complement(base):
-    return {"A":"T","T":"A","G":"C","C":"G"}[base]
+    return {"A":"T","T":"A","G":"C","C":"G",
+            {"a":"t","t":"a","g":"c","c":"g"}}[base]
     
 def wc(word):
     return map(complement, word[::-1])
