@@ -2,7 +2,7 @@
 import itertools,math
 import random
 
-BASE_PAIR_ORDERING = "acgt"
+#BASE_PAIR_ORDERING = "acgt"
 
 def normalize(xs):
     return map(lambda(x): x/float(sum(xs)),xs)
@@ -73,10 +73,11 @@ def safe_log2(x):
     return math.log(x,2) if x > 0 else 0
 
 def complement(base):
-    return {"A":"T","T":"A","G":"C","C":"G"}[base]
+    return {"A":"T","T":"A","G":"C","C":"G",
+            "a":"t","t":"a","g":"c","c":"g"}[base]
     
 def wc(word):
-    return map(complement, word[::-1])
+    return [complement(c) for c in word[::-1]]
 
 def split_on(xs, pred):
     """Split xs into a list of lists each beginning with the next x
@@ -167,4 +168,16 @@ def foldl(f,z,xs):
 def foldl1(f,xs):
     return foldl(f,xs[0],xs[1:])
 
+def truncate(x,n=3):
+    s = str(x)
+    try:
+        dec_point = s.index('.')
+    except ValueError:
+        return x
+    return float(s[:dec_point + n + 1])
+
+def concat(xxs):
+    return sum(xxs,[])
+
 print "loaded utils"
+

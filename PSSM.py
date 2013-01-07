@@ -1,10 +1,14 @@
 import random
-from utils import *
-from math import log
+from sufficache_utils import *
+from math import log,exp
 
 kB  = 0.0019872041 #kcal/mol (!)
 temp = 310.15 #37C
 beta = -1/(kB*temp)
+
+BASES = "acgt"
+BASE_PAIR_ORDERING = {"a":0,"c":1,"g":2,"t":3}
+INV_BASE_PAIR_ORDERING = {0:"a",1:"c",2:"g",3:"t"}
 
 def verbose_gen(xs,n=1):
     for i,x in enumerate(xs):
@@ -23,7 +27,6 @@ def verbose_gen(xs,n=1):
 
         
 class PSSM(list):
-    bpo = {"a":0,"c":1,"g":2,"t":3}
     """Implements a position-specific scoring matrix.  The primary
     data representation is a list of lists of log-likelihoods for each
     character, for each column, of the pssm.  The characters are
@@ -32,17 +35,6 @@ class PSSM(list):
 
     bpo = {"a":0,"c":1,"g":2,"t":3} #base-pair ordering
     
-    # def bpo(self,c):
-    #     if c in "ac":
-    #         if c == 'a':
-    #             return 0
-    #         else:
-    #             return 1
-    #     elif c == "g":
-    #         return 2
-    #     else:
-    #         return 3
-
     def __init__(self,data,background_probs = (0.25,)*4):
         """Given a representation of a binding motif and an optional
         tuple of background probabilities, initialize a PSSM object.
@@ -60,8 +52,8 @@ class PSSM(list):
             return [safe_log2(c/p)
                     for (c, p) in zip(normalize(col), background_probs)]
         def count(column):
-            return [column.count(c) for c in BASE_PAIR_ORDERING]
-        if not type(data[0][0]) is str:
+            return [column.count(c) for c in BASES]
+        if not type(data[0][0]) is str: #"if data is a matrix of counts..."
             self.columns = [convert_column(col) for col in data]
         else:
             assert(contains_binding_sites(data))
@@ -106,7 +98,6 @@ class PSSM(list):
             return 2
         else:
             return 3
-
     
     def base_pair_ordering3(self,base):
         return {"a":0,"c":1,"g":2,"t":3}
@@ -114,8 +105,6 @@ class PSSM(list):
         
     def score(self,word):
         """Return log-odds score for word"""
-        #return sum([col[BASE_PAIR_ORDERING.index(base)]
-        #            for col, base in zip(self.columns, word)])
         return sum([col[PSSM.bpo[base]]
                     for col, base in zip(self.columns, word)])
 
@@ -127,6 +116,17 @@ class PSSM(list):
         rev_maxes = map(max, self.columns[::-1])
         rev_thetas = reduce(lambda ths, x: ths + [ths[-1] - x], rev_maxes, [theta])
         return rev_thetas[::-1][1:]
+    
+    def upper_partial_thresholds(self,theta):
+        """Returns a list of partial thresholds to be interpreted as
+        follows: After having read position i, if you have scored at
+        least pt[i] then the word will be a positive no matter what
+        the rest of the word contains"""
+        mins = map(min, self.columns)
+        n = len(self.columns)
+        thetas = [theta - sum(mins[i+1:]) for i in range(n)]
+        return thetas
+
 
     def list_all_scores(self,columns = None):
         """Enumerate all possible scores.  Do not call this method for
@@ -162,7 +162,7 @@ class PSSM(list):
         return filter(lambda (i,score): score > theta,scores)
     
     def search_esa(self,esa,theta):
-        """Implements algorithm 1 from Beckstette et al."""
+        """Implements algorithm 1 from Beckstette et al. (2006)"""
         #The pseudo-code given in Beckstette is incorrect.  I have
         #corrected it here.
         #As for style: sorry mom, sorry dad, sorry Cormen.
@@ -177,10 +177,10 @@ class PSSM(list):
             return [(-1, -1)] #if there exist ns in the string, deal with
                              #it later
         m = len(self)
-        M = lambda d, char: self[d][BASE_PAIR_ORDERING.index(char)]
-        
-
+        M = lambda d, char: self[d][BASE_PAIR_ORDERING[char]]
         while (i < n):
+            if i % 1000 == 0:
+                print i
             if n - m < suf[i]: #if too far in to match
                 while(n - m < suf[i] and (i < n)):
                     i += 1
@@ -207,9 +207,79 @@ class PSSM(list):
                     else:
                         break
             else:
+                #print "skipping"
+                #print "d:",d
+                #i_before = i
                 i = esa.skipchain(i, d)
+                #print "increased i by:",i - i_before
             depth = lcp[i]
         return matches
+
+    def search_esa_for_top_k(self,esa,theta,k):
+        """Implements algorithm 1 from Beckstette et al. (2006)"""
+        #The pseudo-code given in Beckstette is incorrect.  I have
+        #corrected it here.
+        #As for style: sorry mom, sorry dad, sorry Cormen.
+        matches = []
+        C = {}
+        thetas = self.partial_thresholds(theta)
+        suf, lcp, skp, suffixes = esa.suf, esa.lcp, esa.skp, esa.suffixes
+        depth = 0
+        i = 0
+        n = len(esa.word)
+        if 'n' in esa.word:
+            return [(-1, -1)] #if there exist ns in the string, deal with
+                             #it later
+        m = len(self)
+        M = lambda d, char: self[d][BASE_PAIR_ORDERING[char]]
+        while (i < n):
+            if i % 1000 == 0:
+                print i
+            if n - m < suf[i]: #if too far in to match
+                while(n - m < suf[i] and (i < n)):
+                    i += 1
+                    depth = min(depth, lcp[i])
+                if i >= n:
+                    return matches
+            if depth == 0:
+                score = 0
+            else:
+                score = C[depth - 1]
+            d = depth - 1
+            sentinel = True #hacks around the do-while loop
+            while(sentinel or (d < m -1 and score >= thetas[d])):
+                sentinel = False
+                d = d + 1
+                score = score + M(d, suffixes(i)[d])
+                C[d] = score
+            if(d == m - 1 and score >= theta):
+                print "adding"
+                matches.append((suf[i], score))
+                if len(matches) > k:
+                    print "revising theta"
+                    matches = sorted(matches,
+                                     key = lambda(suf,score):score,
+                                     reverse=True)[:k]
+                    index,least_score = matches[-1]
+                    theta = least_score
+                    print "theta:",theta
+                    thetas = self.partial_thresholds(theta)
+                    print "thetas:",thetas
+                while(i < n):
+                    i += 1
+                    if lcp[i] >= m:
+                        matches.append((suf[i], score))
+                    else:
+                        break
+            else:
+                #print "skipping"
+                #print "d:",d
+                #i_before = i
+                i = esa.skipchain(i, d)
+                #print "increased i by:",i - i_before
+            depth = lcp[i]
+        return matches
+
 
     def get_consensus(self):
         return "".join([max(col,key=lambda c:col.count(c))
@@ -221,32 +291,57 @@ class PSSM(list):
                        (self.counts[i][PSSM.bpo[seq[i]]] + 0.5))
                    for i in range(len(seq)))
 
-    def trap(self,seq,beta=beta):
+    def info_score(self,seq):
+        return (sum())
+        
+    def trap(self,seq,beta=beta,strand_correction=True):
         """Return the binding affinity as given by the TRAP model.
         See Manke 2008, Roider 2007."""
-        n = len(self.motif)
-        w = len(self.motif[0])
-        lamb = 0.7
-        ln_R_0 = 0.585 * w - 5.66
-        E = 1/lamb * sum(log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
-                             (self.counts[i][PSSM.bpo[seq[i]]] + 1))
-                for i in range(len(seq)))
+        if strand_correction:
+            e_f = self.trap(seq,    strand_correction=False)
+            e_b = self.trap(wc(seq),strand_correction=False)
+            return log(exp(beta * e_f) + exp(beta * e_b))/beta
+        else:
+            n = len(self.motif)
+            w = len(self.motif[0])
+            lamb = 0.7
+            ln_R_0 = 0.585 * w - 5.66
+            E = 1/lamb * sum(log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
+                                 float((self.counts[i][PSSM.bpo[seq[i]]] + 1)))
+                             for i in range(len(seq)))
         #we define beta = -1/kBT whereas Manke defines b = 1/kBT,
         #hence change of sign
         return E + ln_R_0
 
-    def slide_trap(self,genome):
+    def slide_trap(self,genome,strand_correction=True):
         w = len(self.motif[0])
-        return [self.trap(genome[i:i+w])
+        return [self.trap(genome[i:i+w],strand_correction=strand_correction)
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
     def slide_score(self,genome):
         w = len(self.motif[0])
         return [self.score(genome[i:i+w])
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
 
-    def slide_trap(self,genome):
-        w = len(self.motif[0])
-        return [self.trap(genome[i:i+w])
-                           for i in verbose_gen(range(len(genome) - w + 1),100000)]
+    def enumerate_high_scoring_sites(self,theta):
+        """Return sites over DNA alphabet scoring better or equal to theta"""
+        distance = 1
+        sites = enumerate_mutant_sites(self.get_consensus(),distance)
+        while any(map(lambda site:self.score(site) > theta,sites)):
+            distance += 1
+            print distance
+            sites = enumerate_mutant_sites(self.get_consensus(),distance)
+        print "distance:",distance
+        return [site for site in sites if self.score(site) >= theta]
+            
+    def fast_search(self,genome,theta):
+        sites = self.enumerate_high_scoring_sites(theta)
+        print "num sites:",len(sites)
+        matches = []
+        for i,site in enumerate(sites):
+            print i,site
+            score = self.score(site)
+            matches.extend([(score,site) for site in re.findall(site,genome)])
+            print len(matches)
+        return matches
         
 print("loaded PSSM")
