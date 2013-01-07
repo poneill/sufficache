@@ -34,6 +34,7 @@ class PSSM(list):
     i.e. alphabetically."""
 
     bpo = {"a":0,"c":1,"g":2,"t":3} #base-pair ordering
+    inv_bpo = {0:"a",1:"c",2:"g",3:"t"}
     
     def __init__(self,data,background_probs = (0.25,)*4):
         """Given a representation of a binding motif and an optional
@@ -332,7 +333,71 @@ class PSSM(list):
             sites = enumerate_mutant_sites(self.get_consensus(),distance)
         print "distance:",distance
         return [site for site in sites if self.score(site) >= theta]
-            
+
+    def min_score_given(self,partial_word):
+        l = len(partial_word)
+        return self.score(partial_word) + sum(map(min,self.columns[l:]))
+
+    def max_score_given(self,partial_word):
+        l = len(partial_word)
+        return self.score(partial_word) + sum(map(max,self.columns[l:]))
+
+    def next_best_word_naive(self,word):
+        """Given a word, return the next best scoring 1-hamming dist. word"""
+        bpo = PSSM.bpo
+        inv_bpo = PSSM.inv_bpo
+        best_column = None
+        best_char = None
+        best_diff = -1e6
+        for j,char in enumerate(word):
+            col = self.columns[j]
+            val = col[bpo[char]]
+            possible_vals = [(i,v) for (i,v) in enumerate(col)
+                             if v < val or (v == val and i > bpo[char])] #later
+                                                                       #in
+                                                                       #lexico
+                                                                       #order
+            #print j,char,val,possible_vals
+            if possible_vals:
+                best_possible_index_val = max(possible_vals,key=lambda(x,y):y)
+                best_possible_index,best_possible_val = best_possible_index_val
+                best_possible_diff = best_possible_val - val
+                if best_possible_diff > best_diff:
+                    #print "accepting:",j,inv_bpo[best_possible_index]
+                    best_diff = best_possible_diff
+                    best_column = j
+                    best_char = inv_bpo[best_possible_index]
+        if best_column is None:
+            raise Exception("Reached worst word")
+        new_word = word[:best_column] + best_char + word[best_column+1:]
+        #print word
+        #print new_word
+        return new_word
+        
+    def next_best_word(self,word):
+        word_score = self.score(word)
+        best_score = [self.score(self.next_best_word_naive(word))] # for mutability
+        def walk_tree(partial_word):
+            if random.random() < 0.0001:
+                print partial_word,best_score[0]
+            if (self.max_score_given(partial_word) < best_score[0] or
+                self.min_score_given(partial_word) > word_score):
+                return None
+            elif len(partial_word) == len(self):
+                best_score[0] = self.score(partial_word)
+                return (best_score[0],partial_word)
+            else:
+                children = filter(lambda x:x,[walk_tree(partial_word + b)
+                                              for b in BASES])
+                if children:
+                    return max(children, key = lambda(score,word):word)
+                else:
+                    return None
+        result = walk_tree("")
+        print best_score
+        return result
+                
+        
     def fast_search(self,genome,theta):
         sites = self.enumerate_high_scoring_sites(theta)
         print "num sites:",len(sites)
@@ -343,5 +408,6 @@ class PSSM(list):
             matches.extend([(score,site) for site in re.findall(site,genome)])
             print len(matches)
         return matches
-        
+    
+    
 print("loaded PSSM")
