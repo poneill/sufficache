@@ -1,5 +1,5 @@
 """Extended Suffix Array Class"""
-from utils import *
+from sufficache_utils import *
 import time
 import math
 from kark_sort import simple_kark_sort
@@ -43,6 +43,7 @@ def lcp2(x, y, word):
 class ESA_deprecated(object):
     def __init__(self, word):
         self.word = word
+        self.n = len(word)
         self._suffixes = suffixes_of(word)
         self.suf = [len(word) - len(self._suffixes[i]) + 1
                     for i in range(len(word)+1)]
@@ -50,49 +51,55 @@ class ESA_deprecated(object):
         self.skp = [min(gen_head((j for j in range(i+1, len(word) + 1)
                          if self.lcp[j] < self.lcp[i])),len(word) + 1)
                          for i in range(len(word) + 1)]
+        
 
     def suffixes(self,i):
         return self._suffixes[i]
     
     def skipchain(self, i, d):
-        n = len(self.word)
         j = i + 1
-        if i < n:
-            while((j <= n) and (self.lcp[j] > d)):
+        if i < self.n:
+            while((j <= self.n) and (self.lcp[j] > d)):
                 j = self.skp[j]#should be +1? Tue Aug 21 13:27:34 EDT 2012
         else:
-            j = n
+            j = self.n
         return j
     
 class ESA(object):
     def __init__(self, word):
+        start_time = time.time()
         self.word = word
+        self.n = len(word)
         # self.suffixes = suffixes_of(word)
         # self.suf = [len(word) - len(self.suffixes[i]) + 1
         #             for i in range(len(word)+1)]
         n = len(word)
-        print "sufs"
+        print "constructing sufs"
+        suf_before = time.time()
         self.suf = simple_kark_sort(word)
-        print "lcp"
+        suf_after = time.time()
+        print "constructing lcp"
         self.lcp = [0] + [lcp2(self.suf[i], self.suf[j], word)
                           for (i, j) in gen_pairs_range(n + 1)]
         print len(self.lcp)
-        print "skp"
+        print "constructing skp"
         self.skp = [min(gen_head((j for j in xrange(i+1, n + 1)
                          if self.lcp[j] < self.lcp[i])),n + 1)
                          for i in xrange(n + 1)]
+        end_time = time.time()
+        print "Suffix construction took: %s sec" % (suf_after - suf_before)
+        print "ESA construction took: %s sec" % (end_time - start_time)
 
     def suffixes(self,i):
         return self.word[self.suf[i]:]
 
     def skipchain(self, i, d):
-        n = len(self.word)
         j = i + 1
-        if i < n:
-            while((j <= n) and (self.lcp[j] > d)):
+        if i < self.n:
+            while((j <= self.n) and (self.lcp[j] > d)):
                 j = self.skp[j]#should be +1? Tue Aug 21 13:27:34 EDT 2012
         else:
-            j = n
+            j = self.n
         return j
     
     
@@ -260,4 +267,34 @@ def s_dist(xs):
             dist = 0
     return s_dists
     
-print ("loaded ESA")
+print "loaded ESA"
+
+def test_esa(motif_or_tf,genome,cutoff,esa=None):
+    """Compare the results of ESA to a naive sliding window approach."""
+    if type(motif_or_tf) is list:
+        tf = PSSM(motif)
+    else:
+        tf = motif_or_tf
+    if esa is None:
+        esa = ESA(genome)
+    esa_before = time.time()
+    esa_results = tf.search_esa(esa,cutoff)
+    esa_after = time.time()
+    sw_before = time.time()
+    sliding_window_results = [(i,score)
+                              for (i,score) in enumerate(tf.slide_score(genome))
+                              if score >= cutoff]
+    sw_after = time.time()
+    print "ESA search took: %s " % (esa_after - esa_before)
+    print "Sliding window search took: %s " % (sw_after - sw_before)
+    if set(esa_results) == set(sliding_window_results):
+        print "test succeeded"
+        return True
+    else:
+        print "test failed"
+        print "ESA search yielded %s results" % len(esa_results)
+        print "Sliding window search yielded %s results" % len(sliding_window_results)
+        return esa_results, sliding_window_results
+                                                
+def extract_esa_results(esa_results,genome,w):
+    return [genome[i:i+n] for (i,score) in esa_results]
