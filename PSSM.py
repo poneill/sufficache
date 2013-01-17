@@ -18,13 +18,6 @@ def verbose_gen(xs,n=1):
         
 def contains_binding_sites(data):
     return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
-
-def verbose_gen(xs,n=1):
-    for i,x in enumerate(xs):
-        if i % n == 0:
-            print i
-        yield x
-
         
 class PSSM(list):
     """Implements a position-specific scoring matrix.  The primary
