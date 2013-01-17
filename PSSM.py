@@ -50,7 +50,8 @@ class PSSM(list):
          The proper interpretation (raw motif or counts) is be inferred
          from the type of the list."""
         def convert_column(col):
-            return [safe_log2(c/p)
+            epsilon = 1e-10
+            return [log(c/p + epsilon,2)
                     for (c, p) in zip(normalize(col), background_probs)]
         def count(column):
             return [column.count(c) for c in BASES]
