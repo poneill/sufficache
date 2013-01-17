@@ -37,7 +37,7 @@ Search the genome:
 # [(100, 3.916428337230777), (165, 3.916428337230777), (262, 3.916428337230777), (768, 4.086353338673089), (85, 3.916428337230777)]
 """
 
-import utils
+import sufficache_utils
 from ESA import ESA
 from PSSM import PSSM
 
