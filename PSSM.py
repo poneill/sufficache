@@ -6,9 +6,9 @@ kB  = 0.0019872041 #kcal/mol (!)
 temp = 310.15 #37C
 beta = -1/(kB*temp)
 
-BASES = "acgt"
-BASE_PAIR_ORDERING = {"a":0,"c":1,"g":2,"t":3}
-INV_BASE_PAIR_ORDERING = {0:"a",1:"c",2:"g",3:"t"}
+BASES = "ACGT"
+BASE_PAIR_ORDERING = {"A":0,"C":1,"G":2,"T":3}
+INV_BASE_PAIR_ORDERING = {0:"A",1:"C",2:"G",3:"T"}
 
 def verbose_gen(xs,n=1):
     for i,x in enumerate(xs):
@@ -26,7 +26,7 @@ class PSSM(list):
     assumed to be ordered according to BASE_PAIR_ORDERING,
     i.e. alphabetically."""
 
-    bpo = {"a":0,"c":1,"g":2,"t":3} #base-pair ordering
+    bpo = {"A":0,"C":1,"G":2,"T":3} #base-pair ordering
     
     def __init__(self,data,background_probs = (0.25,)*4):
         """Given a representation of a binding motif and an optional
@@ -71,29 +71,29 @@ class PSSM(list):
         return self.columns[i:j]
 
     def base_pair_ordering(self,base):
-        if base in "ac":
-            if base == 'a':
+        if base in "AC":
+            if base == 'A':
                 return 0
             else:
                 return 1
         else:
-            if base == 'g':
+            if base == 'G':
                 return 2
             else:
                 return 3
 
     def base_pair_ordering2(self,base):
-        if base == 'a':
+        if base == 'A':
             return 0
-        elif base == 'c':
+        elif base == 'C':
             return 1
-        elif base == 'g':
+        elif base == 'G':
             return 2
         else:
             return 3
     
     def base_pair_ordering3(self,base):
-        return {"a":0,"c":1,"g":2,"t":3}
+        return {"A":0,"C":1,"G":2,"T":3}
 
         
     def score(self,word):
