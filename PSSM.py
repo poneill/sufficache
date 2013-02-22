@@ -18,7 +18,7 @@ def verbose_gen(xs,n=1):
         
 def contains_binding_sites(data):
     return all([[c in BASE_PAIR_ORDERING for c in site] for site in data])
-        
+
 class PSSM(list):
     """Implements a position-specific scoring matrix.  The primary
     data representation is a list of lists of log-likelihoods for each
@@ -29,7 +29,7 @@ class PSSM(list):
 
     bpo = {"A":0,"C":1,"G":2,"T":3} #base-pair ordering
     
-    def __init__(self,data,background_probs = (0.25,)*4):
+    def __init__(self,data,background_probs = (0.25,)*4,pseudo_counts=False):
         """Given a representation of a binding motif and an optional
         tuple of background probabilities, initialize a PSSM object.
         PSSMs can be initialized from a raw binding motif, i.e. a list
@@ -47,7 +47,7 @@ class PSSM(list):
             return [log(c/p + epsilon,2)
                     for (c, p) in zip(normalize(col), background_probs)]
         def count(column):
-            return [column.count(c) for c in BASES]
+            return [column.count(c) + pseudo_counts for c in BASES]
         if not type(data[0][0]) is str: #"if data is a matrix of counts..."
             self.columns = [convert_column(col) for col in data]
         else:
@@ -98,10 +98,14 @@ class PSSM(list):
         return {"A":0,"C":1,"G":2,"T":3}
 
         
-    def score(self,word):
+    def score(self,word,both_strands=True):
         """Return log-odds score for word"""
-        return sum([col[PSSM.bpo[base]]
+        fd_score = sum([col[PSSM.bpo[base]]
                     for col, base in zip(self.columns, word)])
+        bk_score = (sum([col[PSSM.bpo[base]]
+                    for col, base in zip(self.columns, wc(word))])
+                    if both_strands else None)
+        return max(fd_score,bk_score)
 
     def partial_thresholds(self,theta):
         """Returns a list of partial thresholds to be interpreted as
@@ -289,12 +293,12 @@ class PSSM(list):
     def info_score(self,seq):
         return (sum())
         
-    def trap(self,seq,beta=beta,strand_correction=True):
+    def trap(self,seq,beta=beta,both_strands=True):
         """Return the binding affinity as given by the TRAP model.
         See Manke 2008, Roider 2007."""
-        if strand_correction:
-            e_f = self.trap(seq,    strand_correction=False)
-            e_b = self.trap(wc(seq),strand_correction=False)
+        if both_strands:
+            e_f = self.trap(seq,    both_strands=False)
+            e_b = self.trap(wc(seq),both_strands=False)
             return log(exp(beta * e_f) + exp(beta * e_b))/beta
         else:
             n = len(self.motif)
@@ -308,13 +312,33 @@ class PSSM(list):
         #hence change of sign
         return E + ln_R_0
 
-    def slide_trap(self,genome,strand_correction=True):
+    def fast_trap(self,seq,beta=beta,both_strands=True):
+        """Return the binding affinity as given by the TRAP model.
+        See Manke 2008, Roider 2007."""
+        n = len(self.motif)
         w = len(self.motif[0])
-        return [self.trap(genome[i:i+w],strand_correction=strand_correction)
+        lamb = 0.7
+        ln_R_0 = 0.585 * w - 5.66
+        e_f = 1/lamb * sum([log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
+                              float((self.counts[i][PSSM.bpo[seq[i]]] + 1)))
+                          for i in range(len(seq))]) + ln_R_0
+        if both_strands:
+            wc_seq = wc(seq)
+            e_b = 1/lamb * sum([log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
+                              float((self.counts[i][PSSM.bpo[wc_seq[i]]] + 1)))
+                                for i in range(len(wc_seq))]) + ln_R_0
+            return log(exp(beta * e_f) + exp(beta * e_b))/beta
+        else:
+            return e_f
+
+    def slide_trap(self,genome,both_strands=True):
+        w = len(self.motif[0])
+        return [self.trap(genome[i:i+w],both_strands=both_strands)
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
-    def slide_score(self,genome):
+    
+    def slide_score(self,genome,both_strands=True):
         w = len(self.motif[0])
-        return [self.score(genome[i:i+w])
+        return [self.score(genome[i:i+w],both_strands=both_strands)
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
 
     def enumerate_high_scoring_sites(self,theta):

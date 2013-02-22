@@ -79,6 +79,15 @@ def complement(base):
 def wc(word):
     return [complement(c) for c in word[::-1]]
 
+def wc(word):
+    """Reverse complement function"""
+    # see wc_ref for non-terrible implementation
+    new_word = ""
+    for c in word:
+        new_word += {"A":"T","T":"A","G":"C","C":"G",
+                     "a":"t","t":"a","g":"c","c":"g"}[c] #~3x speedup by inlining
+    return new_word
+
 def split_on(xs, pred):
     """Split xs into a list of lists each beginning with the next x
     satisfying pred, except possibly the first"""
