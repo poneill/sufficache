@@ -40,5 +40,3 @@ Search the genome:
 import sufficache_utils
 from ESA import ESA
 from PSSM import PSSM
-
-
