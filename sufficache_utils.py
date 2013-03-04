@@ -76,16 +76,17 @@ def complement(base):
     return {"A":"T","T":"A","G":"C","C":"G",
             "a":"t","t":"a","g":"c","c":"g"}[base]
     
-def wc(word):
+def wc_reference(word):
     return [complement(c) for c in word[::-1]]
 
 def wc(word):
     """Reverse complement function"""
     # see wc_ref for non-terrible implementation
     new_word = ""
+    #~3x speedup by inlining
     for c in word:
-        new_word += {"A":"T","T":"A","G":"C","C":"G",
-                     "a":"t","t":"a","g":"c","c":"g"}[c] #~3x speedup by inlining
+        new_word = {"A":"T","T":"A","G":"C","C":"G",
+                     "a":"t","t":"a","g":"c","c":"g"}[c] + new_word
     return new_word
 
 def split_on(xs, pred):
