@@ -4,7 +4,7 @@ from math import log,exp
 
 kB  = 0.0019872041 #kcal/mol (!)
 temp = 310.15 #37C
-beta = -1/(kB*temp)
+beta = 1/(kB*temp)
 
 BASES = "ACGT"
 BASE_PAIR_ORDERING = {"A":0,"C":1,"G":2,"T":3}
@@ -42,22 +42,39 @@ class PSSM(list):
 
          The proper interpretation (raw motif or counts) is be inferred
          from the type of the list."""
-        def convert_column(col):
+        def convert_column(column):
+            """Return a dictionary of log odds scores for the column"""
             epsilon = 1e-10
-            return [log(c/p + epsilon,2)
-                    for (c, p) in zip(normalize(col), background_probs)]
+            col_probs = normalize([column.count(b) + pseudo_counts
+                                   for b in BASES])
+            return {b:log(c/p + epsilon,2)
+                    for (c, p, b) in zip(col_probs, background_probs,BASES)}
         def count(column):
-            return [column.count(c) + pseudo_counts for c in BASES]
+            """Return a dictionary of counts for the column"""
+            return {c:(column.count(c) + pseudo_counts) for c in BASES}
         if not type(data[0][0]) is str: #"if data is a matrix of counts..."
             self.columns = [convert_column(col) for col in data]
         else:
             assert(contains_binding_sites(data))
             counts = [count(col) for col in transpose(data)]
             self.counts = counts
-            self.columns = [convert_column(col) for col in counts]
-            self.motif = data
+            self.columns = [convert_column(col) for col in transpose(data)]
+        self.motif = data
         self.length = len(self.columns)
         self.consensus = self.get_consensus()
+        self.fd_trap_columns = [{b:log((self.counts[i][self.consensus[i]]+1)/
+                              float((self.counts[i][b] + 1)))
+                                 for b in BASES}
+                                for i in range(self.length)]
+        wc_motif = map(wc,self.motif)
+        wc_counts = [count(col) for col in transpose(wc_motif)]
+        wc_consensus = "".join([max(col,key=lambda c:col.count(c))
+                        for col in transpose(wc_motif)])
+        self.bk_trap_columns = [{b:log((wc_counts[i][wc_consensus[i]]+1)/
+                              float((wc_counts[i][b] + 1)))
+                                 for b in BASES}
+                                for i in range(self.length)]
+        
         
     def __len__(self):
         return len(self.columns)
@@ -100,9 +117,9 @@ class PSSM(list):
         
     def score(self,word,both_strands=True):
         """Return log-odds score for word"""
-        fd_score = sum([col[PSSM.bpo[base]]
+        fd_score = sum([col[base]
                     for col, base in zip(self.columns, word)])
-        bk_score = (sum([col[PSSM.bpo[base]]
+        bk_score = (sum([col[base]
                     for col, base in zip(self.columns, wc(word))])
                     if both_strands else None)
         return max(fd_score,bk_score)
@@ -112,7 +129,7 @@ class PSSM(list):
         follows: After having read position i, you must have scored at
         least pt[i], hence pt[len(pssm)] >= theta if the word is a
         positive"""
-        rev_maxes = map(max, self.columns[::-1])
+        rev_maxes = map(lambda col:max(col.values()), self.columns[::-1])
         rev_thetas = reduce(lambda ths, x: ths + [ths[-1] - x], rev_maxes, [theta])
         return rev_thetas[::-1][1:]
     
@@ -121,23 +138,15 @@ class PSSM(list):
         follows: After having read position i, if you have scored at
         least pt[i] then the word will be a positive no matter what
         the rest of the word contains"""
-        mins = map(min, self.columns)
+        mins = map(lambda col:min(col.values()), self.columns)
         n = len(self.columns)
         thetas = [theta - sum(mins[i+1:]) for i in range(n)]
         return thetas
 
-
-    def list_all_scores(self,columns = None):
-        """Enumerate all possible scores.  Do not call this method for
-        non-trivial motifs: use sample_scores instead"""
-        if not columns:
-            return [0]
-        else:
-            return [w + x for w in columns[0]
-                    for x in self.list_all_scores(columns[1:])]
-
     def sample_scores(self, n):
-        return [sum(random.choice(w) for w in self.columns) for i in range(n)]
+        return [sum(random.choice(col_dict.values())
+                    for col_dict in self.columns) 
+                for i in range(n)]
 
     def cutoff_bootstrap_ci(self,alpha,n):
         """Compute a bootstrap confidence interval for the cutoff
@@ -286,48 +295,24 @@ class PSSM(list):
 
     def het_index(self,seq):
         n = len(self.motif)
-        return sum(log((self.counts[i][PSSM.bpo[self.consensus[i]]]+0.5)/
-                       (self.counts[i][PSSM.bpo[seq[i]]] + 0.5))
+        return sum(log((self.counts[i][self.consensus[i]]+0.5)/
+                       (self.counts[i][seq[i]] + 0.5))
                    for i in range(len(seq)))
 
-    def info_score(self,seq):
-        return (sum())
-        
     def trap(self,seq,beta=beta,both_strands=True):
-        """Return the binding affinity as given by the TRAP model.
-        See Manke 2008, Roider 2007."""
-        if both_strands:
-            e_f = self.trap(seq,    both_strands=False)
-            e_b = self.trap(wc(seq),both_strands=False)
-            return log(exp(beta * e_f) + exp(beta * e_b))/beta
-        else:
-            n = len(self.motif)
-            w = len(self.motif[0])
-            lamb = 0.7
-            ln_R_0 = 0.585 * w - 5.66
-            E = 1/lamb * sum(log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
-                                 float((self.counts[i][PSSM.bpo[seq[i]]] + 1)))
-                             for i in range(len(seq)))
-        #we define beta = -1/kBT whereas Manke defines b = 1/kBT,
-        #hence change of sign
-        return E + ln_R_0
-
-    def fast_trap(self,seq,beta=beta,both_strands=True):
         """Return the binding affinity as given by the TRAP model.
         See Manke 2008, Roider 2007."""
         n = len(self.motif)
         w = len(self.motif[0])
         lamb = 0.7
         ln_R_0 = 0.585 * w - 5.66
-        e_f = 1/lamb * sum([log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
-                              float((self.counts[i][PSSM.bpo[seq[i]]] + 1)))
+        e_f = 1/lamb * sum([self.fd_trap_columns[i][seq[i]]
                           for i in range(len(seq))]) + ln_R_0
         if both_strands:
             wc_seq = wc(seq)
-            e_b = 1/lamb * sum([log((self.counts[i][PSSM.bpo[self.consensus[i]]]+1)/
-                              float((self.counts[i][PSSM.bpo[wc_seq[i]]] + 1)))
-                                for i in range(len(wc_seq))]) + ln_R_0
-            return log(exp(beta * e_f) + exp(beta * e_b))/beta
+            e_b = 1/lamb * sum([self.bk_trap_columns[i][seq[i]]
+                          for i in range(len(seq))]) + ln_R_0
+            return log(exp(-beta * e_f) + exp(-beta * e_b))/(-beta)
         else:
             return e_f
 
@@ -354,68 +339,14 @@ class PSSM(list):
 
     def min_score_given(self,partial_word):
         l = len(partial_word)
-        return self.score(partial_word) + sum(map(min,self.columns[l:]))
+        return self.score(partial_word) + sum(map(lambda col:min(col.values()),
+                                                  self.columns[l:]))
 
     def max_score_given(self,partial_word):
         l = len(partial_word)
-        return self.score(partial_word) + sum(map(max,self.columns[l:]))
+        return self.score(partial_word) + sum(map(lambda col:max(col.values()),
+                                                  self.columns[l:]))
 
-    def next_best_word_naive(self,word):
-        """Given a word, return the next best scoring 1-hamming dist. word"""
-        bpo = PSSM.bpo
-        inv_bpo = PSSM.inv_bpo
-        best_column = None
-        best_char = None
-        best_diff = -1e6
-        for j,char in enumerate(word):
-            col = self.columns[j]
-            val = col[bpo[char]]
-            possible_vals = [(i,v) for (i,v) in enumerate(col)
-                             if v < val or (v == val and i > bpo[char])] #later
-                                                                       #in
-                                                                       #lexico
-                                                                       #order
-            #print j,char,val,possible_vals
-            if possible_vals:
-                best_possible_index_val = max(possible_vals,key=lambda(x,y):y)
-                best_possible_index,best_possible_val = best_possible_index_val
-                best_possible_diff = best_possible_val - val
-                if best_possible_diff > best_diff:
-                    #print "accepting:",j,inv_bpo[best_possible_index]
-                    best_diff = best_possible_diff
-                    best_column = j
-                    best_char = inv_bpo[best_possible_index]
-        if best_column is None:
-            raise Exception("Reached worst word")
-        new_word = word[:best_column] + best_char + word[best_column+1:]
-        #print word
-        #print new_word
-        return new_word
-        
-    def next_best_word(self,word):
-        word_score = self.score(word)
-        best_score = [self.score(self.next_best_word_naive(word))] # for mutability
-        def walk_tree(partial_word):
-            if random.random() < 0.0001:
-                print partial_word,best_score[0]
-            if (self.max_score_given(partial_word) < best_score[0] or
-                self.min_score_given(partial_word) > word_score):
-                return None
-            elif len(partial_word) == len(self):
-                best_score[0] = self.score(partial_word)
-                return (best_score[0],partial_word)
-            else:
-                children = filter(lambda x:x,[walk_tree(partial_word + b)
-                                              for b in BASES])
-                if children:
-                    return max(children, key = lambda(score,word):word)
-                else:
-                    return None
-        result = walk_tree("")
-        print best_score
-        return result
-                
-        
     def fast_search(self,genome,theta):
         sites = self.enumerate_high_scoring_sites(theta)
         print "num sites:",len(sites)
@@ -426,6 +357,5 @@ class PSSM(list):
             matches.extend([(score,site) for site in re.findall(site,genome)])
             print len(matches)
         return matches
-    
     
 print("loaded PSSM")
