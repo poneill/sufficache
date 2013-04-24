@@ -62,8 +62,10 @@ class PSSM(list):
         self.motif = data
         self.length = len(self.columns)
         self.consensus = self.get_consensus()
-        self.fd_trap_columns = [{b:log((self.counts[i][self.consensus[i]]+1)/
-                              float((self.counts[i][b] + 1)))
+        pseudocount = 1/float(len(data))
+        print pseudocount
+        self.fd_trap_columns = [{b:log((self.counts[i][self.consensus[i]]+pseudocount)/
+                              float((self.counts[i][b] + pseudocount)))
                                  for b in BASES}
                                 for i in range(self.length)]
         wc_motif = map(wc,self.motif)
@@ -288,7 +290,6 @@ class PSSM(list):
             depth = lcp[i]
         return matches
 
-
     def get_consensus(self):
         return "".join([max(col,key=lambda c:col.count(c))
                         for col in transpose(self.motif)])
@@ -301,17 +302,23 @@ class PSSM(list):
 
     def trap(self,seq,beta=beta,both_strands=True):
         """Return the binding affinity as given by the TRAP model.
-        See Manke 2008, Roider 2007."""
+        See Manke 2008, Roider 2007.  Note that in Roider 2007, the
+        trap score defined as E(s)*beta = TRAP(s), hence the TRAP
+        score is dimensionless.  For consistency with other scoring
+        methods, we wish to rescale the trap score by 1/beta = kbT so
+        that the score will have units of kBT, and can be interpreted
+        as a free energy of binding.  Therefore, we divide the final
+        result by beta."""
         n = len(self.motif)
         w = len(self.motif[0])
         lamb = 0.7
         ln_R_0 = 0.585 * w - 5.66
-        e_f = 1/lamb * sum([self.fd_trap_columns[i][seq[i]]
-                          for i in range(len(seq))]) + ln_R_0
+        e_f = (1/lamb * sum([self.fd_trap_columns[i][seq[i]]
+                          for i in range(len(seq))]) + ln_R_0)/beta 
         if both_strands:
             wc_seq = wc(seq)
-            e_b = 1/lamb * sum([self.bk_trap_columns[i][seq[i]]
-                          for i in range(len(seq))]) + ln_R_0
+            e_b = (1/lamb * sum([self.bk_trap_columns[i][seq[i]]
+                          for i in range(len(seq))]) + ln_R_0)/beta
             return log(exp(-beta * e_f) + exp(-beta * e_b))/(-beta)
         else:
             return e_f
