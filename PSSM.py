@@ -300,7 +300,7 @@ class PSSM(list):
                        (self.counts[i][seq[i]] + 0.5))
                    for i in range(len(seq)))
 
-    def trap(self,seq,beta=beta,both_strands=True):
+    def trap(self,seq,beta=beta,both_strands=True,ns_binding=False):
         """Return the binding affinity as given by the TRAP model.
         See Manke 2008, Roider 2007.  Note that in Roider 2007, the
         trap score defined as E(s)*beta = TRAP(s), hence the TRAP
@@ -308,9 +308,12 @@ class PSSM(list):
         methods, we wish to rescale the trap score by 1/beta = kbT so
         that the score will have units of kBT, and can be interpreted
         as a free energy of binding.  Therefore, we divide the final
-        result by beta."""
+        result by beta.  Also, we optionally implement non-specific
+        binding by ensuring that -8kbt is the maximum binding score."""
         n = len(self.motif)
         w = len(self.motif[0])
+        e_ns = -8 #kbt
+        ns_contrib = exp(-beta*e_ns) if ns_binding else 0
         lamb = 0.7
         ln_R_0 = 0.585 * w - 5.66
         e_f = (1/lamb * sum([self.fd_trap_columns[i][seq[i]]
@@ -319,9 +322,9 @@ class PSSM(list):
             wc_seq = wc(seq)
             e_b = (1/lamb * sum([self.bk_trap_columns[i][seq[i]]
                           for i in range(len(seq))]) + ln_R_0)/beta
-            return log(exp(-beta * e_f) + exp(-beta * e_b))/(-beta)
+            return log(exp(-beta * e_f) + exp(-beta * e_b) + ns_contrib)/(-beta)
         else:
-            return e_f
+            return log(exp(-beta * e_f) + ns_contrib)/(-beta)
 
     def slide_trap(self,genome,both_strands=True):
         w = len(self.motif[0])
