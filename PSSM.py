@@ -312,7 +312,9 @@ class PSSM(list):
         binding by ensuring that -8kbt is the maximum binding score."""
         n = len(self.motif)
         w = len(self.motif[0])
-        e_ns = -8 #kbt
+        ns_threshold = -8 #kbt
+        consensus_energy = -2 * w
+        ep_ns = consensu_energy - ns_threshold
         ns_contrib = exp(-beta*e_ns) if ns_binding else 0
         lamb = 0.7
         ln_R_0 = 0.585 * w - 5.66
