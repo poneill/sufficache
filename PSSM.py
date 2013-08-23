@@ -326,7 +326,7 @@ class PSSM(list):
         else:
             return log(exp(-beta * e_f) + ns_contrib)/(-beta)
 
-    def slide_trap(self,genome,both_strands=True):
+    def slide_trap(self,genome,both_strands=True,ns_binding=False):
         w = len(self.motif[0])
         return [self.trap(genome[i:i+w],both_strands=both_strands)
                            for i in verbose_gen(range(len(genome) - w + 1),100000)]
