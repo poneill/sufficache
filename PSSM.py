@@ -312,12 +312,19 @@ class PSSM(list):
         binding by ensuring that -8kbt is the maximum binding score."""
         n = len(self.motif)
         w = len(self.motif[0])
-        ns_threshold = -8 #kbt
-        consensus_energy = -2 * w
-        ep_ns = consensu_energy - ns_threshold
-        ns_contrib = exp(-beta*e_ns) if ns_binding else 0
-        lamb = 0.7
+
+        # TRAP values are reported up to an arbitrary constant, such
+        # that the binding energy of the consensus sequence is
+        # approximately zero for a 10 bp site. Assuming that the
+        # \delta G of the consensus site is 2kbt/base, zero_delta_g =
+        # 2*w, and the ns_threshold is 8kbt below that.
         ln_R_0 = 0.585 * w - 5.66
+        consensus_energy_magnitude = 2 * w
+        zero_delta_g = ln_R_0 + consensus_energy_magnitude
+        ns_threshold = -8 #kbt
+        ep_ns = consensus_energy_magnitude + ns_threshold
+        ns_contrib = exp(-beta*ep_ns) if ns_binding else 0
+        lamb = 0.7
         e_f = (1/lamb * sum([self.fd_trap_columns[i][seq[i]]
                           for i in range(len(seq))]) + ln_R_0)/beta 
         if both_strands:
